@@ -1,0 +1,40 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: micahtek-app
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+      - ./sample-data:/app/sample-data
+      - ./data:/app/data
+      - ./sql:/app/sql
+    depends_on:
+      db:
+        condition: service_healthy
+    command: python -m src.cli.run_import --help
+
+  db:
+    image: postgres:16
+    container_name: micahtek-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
