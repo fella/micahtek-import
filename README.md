@@ -9,3 +9,4 @@ Local development environment for parsing MicahTek `.CRD` files, generating dete
 
 ```bash
 docker compose up --build# micahtek-import
+# micahtek-import
