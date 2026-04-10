@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   app:
     build:
@@ -8,15 +6,15 @@ services:
     container_name: micahtek-app
     env_file:
       - .env
+    working_dir: /app
     volumes:
-      - ./src:/app/src
-      - ./sample-data:/app/sample-data
-      - ./data:/app/data
-      - ./sql:/app/sql
+      - .:/app
     depends_on:
       db:
         condition: service_healthy
-    command: python -m src.cli.run_import --help
+    stdin_open: true
+    tty: true
+    command: sh -lc 'sleep infinity'
 
   db:
     image: postgres:16
