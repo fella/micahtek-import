@@ -32,11 +32,6 @@ class RawRecord:
     source_line: int
     raw_text: str
 
-
-def parse_crd(path: str) -> List[RawRecord]:
-    return parse_crd_file(path)
-
-
 def parse_crd_file(file_path: str) -> List[RawRecord]:
     path = Path(file_path)
     if not path.exists():
@@ -75,21 +70,6 @@ def debug_crd_shapes(raw_records):
         print(f"  raw: {raw[:300]}")
         print()
 
-def parse_crd_rows(raw_records: List[RawRecord]) -> List[Dict[str, Any]]:
-    parsed_rows: List[Dict[str, Any]] = []
-
-    for record in raw_records:
-        row = parse_crd_row(record.raw_text, RAW_CRD_HEADERS)
-        row["source_line"] = record.source_line
-        parsed_rows.append(row)
-
-    return parsed_rows
-
-def parse_crd(path: str) -> List[Dict[str, Any]]:
-    raw_records = parse_crd_file(path)
-    return parse_crd_rows(raw_records)
-
-
 def _normalize_header(name: str) -> str:
     normalized = name.strip().lower()
     normalized = normalized.replace("#", "number")
@@ -127,20 +107,6 @@ import csv
 from typing import Any, Dict, List
 
 from src.crd_headers import STANDARD_CRD_HEADERS_56, EXTENDED_CRD_HEADERS_64
-
-
-def parse_crd_row(raw_text: str) -> Dict[str, Any]:
-    values = next(csv.reader([raw_text]))
-    field_count = len(values)
-
-    if field_count == 56:
-        return _parse_with_headers(values, STANDARD_CRD_HEADERS_56)
-    if field_count == 64:
-        return _parse_with_headers(values, EXTENDED_CRD_HEADERS_64)
-    if field_count == 25:
-        return _parse_short_row(values)
-
-    raise ValueError(f"Unsupported CRD row shape: {field_count}")
 
 def _parse_with_headers(values: List[str], headers: List[str]) -> Dict[str, Any]:
     row: Dict[str, str] = {}
