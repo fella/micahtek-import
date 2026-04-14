@@ -236,21 +236,21 @@ def _parse_multi_item_row(values: List[str]) -> Dict[str, Any]:
     row["record_type"] = f"multi_item_{len(values)}"
     return row
 
-    def add_item_group(chunk: List[str]) -> None:
-        while len(chunk) < 8:
-            chunk.append("")
-        item = {
-            "item": chunk[0],
-            "description": chunk[1],
-            "quantity": chunk[2],
-            "unit_retail": chunk[3],
-            "gross_price_unit_retail_times_quantity": chunk[4],
-            "discount": chunk[5],
-            "sales_tax": chunk[6],
-            "net_price_gross_minus_discount_plus_sales_tax": chunk[7],
-        }
-        if any(v.strip() for v in item.values()):
-            items.append(item)
+def add_item_group(chunk: List[str]) -> None:
+    while len(chunk) < 8:
+        chunk.append("")
+    item = {
+        "item": chunk[0],
+        "description": chunk[1],
+        "quantity": chunk[2],
+        "unit_retail": chunk[3],
+        "gross_price_unit_retail_times_quantity": chunk[4],
+        "discount": chunk[5],
+        "sales_tax": chunk[6],
+        "net_price_gross_minus_discount_plus_sales_tax": chunk[7],
+    }
+    if any(v.strip() for v in item.values()):
+        items.append(item)
 
     # first item is already embedded in the base 56 layout
     add_item_group(values[47:55])
