@@ -83,29 +83,6 @@ def _normalize_header(name: str) -> str:
 
     return normalized.strip("_")
 
-
-#Should I remove this as clutter?
-def _extract_item_groups(row_dict: Dict[str, str]) -> List[Dict[str, str]]:
-    item = {
-        "item": row_dict.get("item", ""),
-        "description": row_dict.get("description", ""),
-        "quantity": row_dict.get("quantity", ""),
-        "unit_retail": row_dict.get("unit_retail", ""),
-        "gross_price_unit_retail_times_quantity": row_dict.get(
-            "gross_price_unit_retail_times_quantity", ""
-        ),
-        "discount": row_dict.get("discount", ""),
-        "sales_tax": row_dict.get("sales_tax", ""),
-        "net_price_gross_minus_discount_plus_sales_tax": row_dict.get(
-            "net_price_gross_minus_discount_plus_sales_tax", ""
-        ),
-    }
-
-    if any(value.strip() for value in item.values()):
-        return [item]
-
-    return []
-
 import csv
 from typing import Any, Dict, List
 
@@ -175,6 +152,7 @@ def _parse_short_row(values: List[str]) -> Dict[str, Any]:
         "raw_values": values,
     }
 
+
 def parse_crd_row(raw_text: str) -> Dict[str, Any]:
     values = [v.strip() for v in next(csv.reader([raw_text]))]
     field_count = len(values)
@@ -197,6 +175,7 @@ def parse_crd_row(raw_text: str) -> Dict[str, Any]:
 
     raise ValueError(f"Unsupported CRD row shape: {field_count} fields")
 
+
 def _build_item(chunk: List[str]) -> Dict[str, str]:
     padded = [v.strip() for v in chunk] + [""] * (8 - len(chunk))
     return {
@@ -214,46 +193,20 @@ def _parse_multi_item_row(values: List[str]) -> Dict[str, Any]:
     values = [v.strip() for v in values]
     row: Dict[str, Any] = {}
 
-    # Base metadata from the 56-field layout, excluding the first item block and trailing field
     for header, value in zip(STANDARD_CRD_HEADERS_56[:47], values[:47]):
         row[_normalize_header(header)] = value
 
     items: List[Dict[str, str]] = []
 
-    # First item block from the standard layout
     first_item = _build_item(values[47:55])
     if any(v.strip() for v in first_item.values()):
         items.append(first_item)
 
-    # Additional 8-field item groups after the standard trailing slot
     extra_values = values[56:]
     for i in range(0, len(extra_values), 8):
         item = _build_item(extra_values[i:i + 8])
         if any(v.strip() for v in item.values()):
             items.append(item)
-
-def add_item_group(chunk: List[str]) -> None:
-    while len(chunk) < 8:
-        chunk.append("")
-    item = {
-        "item": chunk[0],
-        "description": chunk[1],
-        "quantity": chunk[2],
-        "unit_retail": chunk[3],
-        "gross_price_unit_retail_times_quantity": chunk[4],
-        "discount": chunk[5],
-        "sales_tax": chunk[6],
-        "net_price_gross_minus_discount_plus_sales_tax": chunk[7],
-    }
-    if any(v.strip() for v in item.values()):
-        items.append(item)
-
-    # first item is already embedded in the base 56 layout
-    add_item_group(values[47:55])
-
-    extra = values[56:]
-    for i in range(0, len(extra), 8):
-        add_item_group(extra[i:i+8])
 
     row["items"] = items
     row["record_type"] = f"multi_item_{len(items)}"
