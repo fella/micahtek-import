@@ -8,7 +8,7 @@ from src.settings import load_settings
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run a MicahTek import.")
-    parser.add_argument("--file", required=True, help="Path to the .CRD file")
+    parser.add_argument("--file", required=True, help="Path to the crd file")
     parser.add_argument(
         "--dry-run",
         action="store_true",
