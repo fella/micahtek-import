@@ -37,7 +37,7 @@ class RawRecord:
 def parse_crd_file(file_path: str) -> List[RawRecord]:
     path = Path(file_path)
     if not path.exists():
-        raise FileNotFoundError(f"CRD file not found: {file_path}")
+        raise FileNotFoundError(f"crd file not found: {file_path}")
 
     records: List[RawRecord] = []
 
