@@ -1,9 +1,14 @@
-from src.parse_crd import parse_crd_file
+from pprint import pprint
+from src.parse_crd import parse_crd_file, parse_crd_rows
 
-file_path = "./fixtures/01015642.crd"   # change this to your real file
+file_path = "./fixtures/01015642.crd"
 
-records = parse_crd_file(file_path)
-print(f"Loaded {len(records)} records")
+raw_records = parse_crd_file(file_path)
+print(f"Loaded {len(raw_records)} raw records")
 
-for record in records[:5]:
-    print(record.source_line, record.raw_text[:120])
+rows = parse_crd_rows(raw_records)
+print(f"Parsed {len(rows)} rows")
+
+for row in rows[:3]:
+    pprint(row)
+    print("-" * 80)
