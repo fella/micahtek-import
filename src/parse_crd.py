@@ -84,6 +84,7 @@ def _normalize_header(name: str) -> str:
     return normalized.strip("_")
 
 
+#Should I remove this as clutter?
 def _extract_item_groups(row_dict: Dict[str, str]) -> List[Dict[str, str]]:
     item = {
         "item": row_dict.get("item", ""),
@@ -191,32 +192,49 @@ def parse_crd_row(raw_text: str) -> Dict[str, Any]:
         row["record_type"] = "extended_2_item"
         return row
 
-    raise ValueError(f"Unsupported CRD row shape: {field_count} fields")
-
-    if field_count == len(STANDARD_CRD_HEADERS_56):
-        row = _parse_with_headers(values, STANDARD_CRD_HEADERS_56)
-        row["record_type"] = "standard"
-        return row
-
-    if field_count == len(EXTENDED_CRD_HEADERS_64):
-        row = _parse_with_headers(values, EXTENDED_CRD_HEADERS_64)
-        row["record_type"] = "extended"
-        return row
-
     if field_count in (72, 88, 112):
         return _parse_multi_item_row(values)
 
     raise ValueError(f"Unsupported CRD row shape: {field_count} fields")
 
+def _build_item(chunk: List[str]) -> Dict[str, str]:
+    padded = [v.strip() for v in chunk] + [""] * (8 - len(chunk))
+    return {
+        "item": padded[0],
+        "description": padded[1],
+        "quantity": padded[2],
+        "unit_retail": padded[3],
+        "gross_price_unit_retail_times_quantity": padded[4],
+        "discount": padded[5],
+        "sales_tax": padded[6],
+        "net_price_gross_minus_discount_plus_sales_tax": padded[7],
+    }
+
 def _parse_multi_item_row(values: List[str]) -> Dict[str, Any]:
-    base_headers = STANDARD_CRD_HEADERS_56[:-1]  # drop trailing unused field
+    values = [v.strip() for v in values]
     row: Dict[str, Any] = {}
 
-    base_count = min(len(base_headers), len(values))
-    for header, value in zip(base_headers, values[:base_count]):
+    # Base metadata from the 56-field layout, excluding the first item block and trailing field
+    for header, value in zip(STANDARD_CRD_HEADERS_56[:47], values[:47]):
         row[_normalize_header(header)] = value
 
-    items = []
+    items: List[Dict[str, str]] = []
+
+    # First item block from the standard layout
+    first_item = _build_item(values[47:55])
+    if any(v.strip() for v in first_item.values()):
+        items.append(first_item)
+
+    # Additional 8-field item groups after the standard trailing slot
+    extra_values = values[56:]
+    for i in range(0, len(extra_values), 8):
+        item = _build_item(extra_values[i:i + 8])
+        if any(v.strip() for v in item.values()):
+            items.append(item)
+
+    row["items"] = items
+    row["record_type"] = f"multi_item_{len(values)}"
+    return row
 
     def add_item_group(chunk: List[str]) -> None:
         while len(chunk) < 8:
