@@ -155,7 +155,7 @@ def _parse_with_headers(values: List[str], headers: List[str]) -> Dict[str, Any]
     row["items"] = items
     return row
 
- def parse_crd_row(raw_text: str) -> Dict[str, Any]:
+def parse_crd_row(raw_text: str) -> Dict[str, Any]:
     values = next(csv.reader([raw_text]))
     field_count = len(values)
 
@@ -165,9 +165,7 @@ def _parse_with_headers(values: List[str], headers: List[str]) -> Dict[str, Any]
     if field_count == len(EXTENDED_CRD_HEADERS_64):
         return _parse_with_headers(values, EXTENDED_CRD_HEADERS_64)
 
-    raise ValueError(
-        f"Unsupported CRD row shape: {field_count} fields"
-    )
+    raise ValueError(f"Unsupported CRD row shape: {field_count} fields")
 
 def parse_crd_rows(raw_records: List[RawRecord]) -> List[Dict[str, Any]]:
     parsed_rows: List[Dict[str, Any]] = []

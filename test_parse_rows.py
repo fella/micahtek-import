@@ -12,3 +12,4 @@ print(f"Parsed {len(rows)} rows")
 for row in rows[:3]:
     pprint(row)
     print("-" * 80)
+    
