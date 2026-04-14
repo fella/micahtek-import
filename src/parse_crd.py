@@ -168,7 +168,7 @@ def _parse_short_row(values: List[str]) -> Dict[str, Any]:
         "operator_number": padded[18],
         "date_of_call_mmddyy": padded[19],
         "time_of_call_hhmmss_24hour_clock": padded[20],
-        "call_type_information_product_referral_custsvchangupprank": padded[21],
+        "call_type_information_product_referral_custsvc_hangupprank": padded[21],
         "call_letters_media_source": padded[22],
         "comments": padded[23],
         "items": [],
@@ -231,10 +231,6 @@ def _parse_multi_item_row(values: List[str]) -> Dict[str, Any]:
         item = _build_item(extra_values[i:i + 8])
         if any(v.strip() for v in item.values()):
             items.append(item)
-
-    row["items"] = items
-    row["record_type"] = f"multi_item_{len(values)}"
-    return row
 
 def add_item_group(chunk: List[str]) -> None:
     while len(chunk) < 8:
