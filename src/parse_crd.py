@@ -155,17 +155,95 @@ def _parse_with_headers(values: List[str], headers: List[str]) -> Dict[str, Any]
     row["items"] = items
     return row
 
+def _parse_short_row(values: List[str]) -> Dict[str, Any]:
+    values = [v.strip() for v in values]
+    padded = values + [""] * (25 - len(values))
+
+    return {
+        "record_type": "short",
+        "control_number": padded[0],
+        "status_codes": padded[16],
+        "client_number": padded[17],
+        "operator_number": padded[18],
+        "date_of_call_mmddyy": padded[19],
+        "time_of_call_hhmmss_24hour_clock": padded[20],
+        "call_type_information_product_referral_custsvchangupprank": padded[21],
+        "call_letters_media_source": padded[22],
+        "comments": padded[23],
+        "items": [],
+        "raw_values": values,
+    }
+
 def parse_crd_row(raw_text: str) -> Dict[str, Any]:
-    values = next(csv.reader([raw_text]))
+    values = [v.strip() for v in next(csv.reader([raw_text]))]
     field_count = len(values)
 
+    if field_count == 25:
+        return _parse_short_row(values)
+
     if field_count == len(STANDARD_CRD_HEADERS_56):
-        return _parse_with_headers(values, STANDARD_CRD_HEADERS_56)
+        row = _parse_with_headers(values, STANDARD_CRD_HEADERS_56)
+        row["record_type"] = "standard"
+        return row
 
     if field_count == len(EXTENDED_CRD_HEADERS_64):
-        return _parse_with_headers(values, EXTENDED_CRD_HEADERS_64)
+        row = _parse_with_headers(values, EXTENDED_CRD_HEADERS_64)
+        row["record_type"] = "extended_2_item"
+        return row
 
     raise ValueError(f"Unsupported CRD row shape: {field_count} fields")
+
+    if field_count == len(STANDARD_CRD_HEADERS_56):
+        row = _parse_with_headers(values, STANDARD_CRD_HEADERS_56)
+        row["record_type"] = "standard"
+        return row
+
+    if field_count == len(EXTENDED_CRD_HEADERS_64):
+        row = _parse_with_headers(values, EXTENDED_CRD_HEADERS_64)
+        row["record_type"] = "extended"
+        return row
+
+    if field_count in (72, 88, 112):
+        return _parse_multi_item_row(values)
+
+    raise ValueError(f"Unsupported CRD row shape: {field_count} fields")
+
+def _parse_multi_item_row(values: List[str]) -> Dict[str, Any]:
+    base_headers = STANDARD_CRD_HEADERS_56[:-1]  # drop trailing unused field
+    row: Dict[str, Any] = {}
+
+    base_count = min(len(base_headers), len(values))
+    for header, value in zip(base_headers, values[:base_count]):
+        row[_normalize_header(header)] = value
+
+    items = []
+
+    def add_item_group(chunk: List[str]) -> None:
+        while len(chunk) < 8:
+            chunk.append("")
+        item = {
+            "item": chunk[0],
+            "description": chunk[1],
+            "quantity": chunk[2],
+            "unit_retail": chunk[3],
+            "gross_price_unit_retail_times_quantity": chunk[4],
+            "discount": chunk[5],
+            "sales_tax": chunk[6],
+            "net_price_gross_minus_discount_plus_sales_tax": chunk[7],
+        }
+        if any(v.strip() for v in item.values()):
+            items.append(item)
+
+    # first item is already embedded in the base 56 layout
+    add_item_group(values[47:55])
+
+    extra = values[56:]
+    for i in range(0, len(extra), 8):
+        add_item_group(extra[i:i+8])
+
+    row["items"] = items
+    row["record_type"] = f"multi_item_{len(items)}"
+    return row
 
 def parse_crd_rows(raw_records: List[RawRecord]) -> List[Dict[str, Any]]:
     parsed_rows: List[Dict[str, Any]] = []
@@ -176,9 +254,6 @@ def parse_crd_rows(raw_records: List[RawRecord]) -> List[Dict[str, Any]]:
             row["source_line"] = record.source_line
             parsed_rows.append(row)
         except Exception as exc:
-            raise ValueError(
-                f"Failed on source_line={record.source_line}: {exc}\n"
-                f"RAW: {record.raw_text}"
-            ) from exc
+            print(f"Skipping source_line={record.source_line}: {exc}")
 
     return parsed_rows
